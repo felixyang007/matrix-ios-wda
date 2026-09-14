@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBRoute.h"
@@ -19,6 +18,7 @@
 
 @interface FBRoute ()
 @property (nonatomic, assign, readwrite) BOOL requiresSession;
+@property (nonatomic, assign, readwrite) BOOL isStandalone;
 @property (nonatomic, copy, readwrite) NSString *verb;
 @property (nonatomic, copy, readwrite) NSString *path;
 
@@ -127,10 +127,17 @@ static NSString *const FBRouteSessionPrefix = @"/session/:sessionID";
   return self;
 }
 
+- (instancetype)standalone
+{
+  self.isStandalone = YES;
+  return self;
+}
+
 - (instancetype)respondWithBlock:(FBRouteSyncHandler)handler
 {
   FBRoute_Sync *route = [FBRoute_Sync withVerb:self.verb path:self.path requiresSession:self.requiresSession];
   route.handler = handler;
+  route.isStandalone = self.isStandalone;
   return route;
 }
 
@@ -139,6 +146,7 @@ static NSString *const FBRouteSessionPrefix = @"/session/:sessionID";
   FBRoute_TargetAction *route = [FBRoute_TargetAction withVerb:self.verb path:self.path requiresSession:self.requiresSession];
   route.target = target;
   route.action = action;
+  route.isStandalone = self.isStandalone;
   return route;
 }
 

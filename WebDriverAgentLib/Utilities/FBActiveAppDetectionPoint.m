@@ -3,22 +3,29 @@
 * All rights reserved.
 *
 * This source code is licensed under the BSD-style license found in the
-* LICENSE file in the root directory of this source tree. An additional grant
-* of patent rights can be found in the PATENTS file in the same directory.
+* LICENSE file in the root directory of this source tree.
 */
 
 #import "FBActiveAppDetectionPoint.h"
 
+#if TARGET_OS_WATCH
+@import WatchKit;
+#endif
+
 #import "FBErrorBuilder.h"
 #import "FBLogger.h"
 #import "FBXCTestDaemonsProxy.h"
-#import "XCTestManager_ManagerInterface-Protocol.h"
+#import "XCTMessagingChannel_RunnerToDaemon-Protocol.h"
 
 @implementation FBActiveAppDetectionPoint
 
 - (instancetype)init {
   if ((self = [super init])) {
+#if TARGET_OS_WATCH
+    CGSize screenSize = WKInterfaceDevice.currentDevice.screenBounds.size;
+#else
     CGSize screenSize = [UIScreen mainScreen].bounds.size;
+#endif
     // Consider the element, which is located close to the top left corner of the screen the on-screen one.
     CGFloat pointDistance = MIN(screenSize.width, screenSize.height) * (CGFloat) 0.2;
     _coordinates = CGPointMake(pointDistance, pointDistance);
@@ -39,7 +46,7 @@
 + (id<FBXCAccessibilityElement>)axElementWithPoint:(CGPoint)point
 {
   __block id<FBXCAccessibilityElement> onScreenElement = nil;
-  id<XCTestManager_ManagerInterface> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
+  id<XCTMessagingChannel_RunnerToDaemon> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
   dispatch_semaphore_t sem = dispatch_semaphore_create(0);
   [proxy _XCT_requestElementAtPoint:point
                               reply:^(id element, NSError *error) {

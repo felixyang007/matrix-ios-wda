@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBScreenshot.h"
@@ -18,7 +17,7 @@
 #import "FBMacros.h"
 #import "FBXCodeCompatibility.h"
 #import "FBXCTestDaemonsProxy.h"
-#import "XCTestManager_ManagerInterface-Protocol.h"
+#import "XCTMessagingChannel_RunnerToDaemon-Protocol.h"
 #import "XCUIScreen.h"
 
 static const NSTimeInterval SCREENSHOT_TIMEOUT = 20.;
@@ -28,7 +27,7 @@ static const CGFloat LOW_QUALITY = 0.25;
 
 NSString *formatTimeInterval(NSTimeInterval interval) {
   NSUInteger milliseconds = (NSUInteger)(interval * 1000);
-  return [NSString stringWithFormat:@"%ld ms", milliseconds];
+  return [NSString stringWithFormat:@"%lu ms", milliseconds];
 }
 
 @implementation FBScreenshot
@@ -96,7 +95,7 @@ NSString *formatTimeInterval(NSTimeInterval interval) {
                                          timeout:(NSTimeInterval)timeout
                                            error:(NSError **)error
 {
-  id<XCTestManager_ManagerInterface> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
+  id<XCTMessagingChannel_RunnerToDaemon> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
   __block NSData *screenshotData = nil;
   __block NSError *innerError = nil;
   dispatch_semaphore_t sem = dispatch_semaphore_create(0);
@@ -127,7 +126,7 @@ NSString *formatTimeInterval(NSTimeInterval interval) {
         withDescription:timeoutMsg]
        buildError:error];
     }
-  };
+  }
   if (nil != error && nil != innerError) {
     *error = innerError;
   }

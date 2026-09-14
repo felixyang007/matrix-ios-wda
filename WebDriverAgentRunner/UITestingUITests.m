@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -23,18 +22,18 @@
 + (void)setUp
 {
   [FBDebugLogDelegateDecorator decorateXCTestLogger];
-  [FBConfiguration disableRemoteQueryEvaluation];
-  [FBConfiguration configureDefaultKeyboardPreferences];
-  [FBConfiguration disableApplicationUIInterruptionsHandling];
+  [FBConfiguration.sharedInstance disableRemoteQueryEvaluation];
+  [FBConfiguration.sharedInstance configureDefaultKeyboardPreferences];
+  [FBConfiguration.sharedInstance disableApplicationUIInterruptionsHandling];
   if (NSProcessInfo.processInfo.environment[@"ENABLE_AUTOMATIC_SCREEN_RECORDINGS"]) {
-    [FBConfiguration enableScreenRecordings];
+    [FBConfiguration.sharedInstance enableScreenRecordings];
   } else {
-    [FBConfiguration disableScreenRecordings];
+    [FBConfiguration.sharedInstance disableScreenRecordings];
   }
   if (NSProcessInfo.processInfo.environment[@"ENABLE_AUTOMATIC_SCREENSHOTS"]) {
-    [FBConfiguration enableScreenshots];
+    [FBConfiguration.sharedInstance enableScreenshots];
   } else {
-    [FBConfiguration disableScreenshots];
+    [FBConfiguration.sharedInstance disableScreenshots];
   }
   [super setUp];
 }

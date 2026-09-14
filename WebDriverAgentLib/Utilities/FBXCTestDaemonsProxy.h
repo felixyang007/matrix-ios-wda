@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -17,12 +16,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol XCTestManager_ManagerInterface;
+@protocol XCTMessagingChannel_RunnerToDaemon;
 @class FBScreenRecordingRequest, FBScreenRecordingPromise;
 
 @interface FBXCTestDaemonsProxy : NSObject
 
-+ (id<XCTestManager_ManagerInterface>)testRunnerProxy;
++ (id<XCTMessagingChannel_RunnerToDaemon>)testRunnerProxy;
 
 + (BOOL)synthesizeEventWithRecord:(XCSynthesizedEventRecord *)record
                             error:(NSError *__autoreleasing*)error;

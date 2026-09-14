@@ -3,13 +3,14 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBWebDriverAttributes.h"
 
+#import "FBConfiguration.h"
 #import "FBElementTypeTransformer.h"
+#import "FBElementHelpers.h"
 #import "FBLogger.h"
 #import "FBMacros.h"
 #import "FBXCElementSnapshotWrapper.h"
@@ -21,6 +22,9 @@
 #import "FBElementUtils.h"
 #import "XCTestPrivateSymbols.h"
 #import "XCUIHitPointResult.h"
+#import "FBAccessibilityTraits.h"
+#import "XCUIElement+FBMinMax.h"
+#import "XCUIElement+FBCustomActions.h"
 
 #define BROKEN_RECT CGRectMake(-1, -1, 0, 0)
 
@@ -28,10 +32,24 @@
 
 - (id<FBXCElementSnapshot>)fb_snapshotForAttributeName:(NSString *)name
 {
-  BOOL inDepth = [name isEqualToString:FBStringify(XCUIElement, isWDAccessible)]
+  // https://github.com/appium/appium-xcuitest-driver/pull/2565
+  if ([name isEqualToString:FBStringify(XCUIElement, isWDHittable)]) {
+    return [self fb_nativeSnapshot];
+  }
+  // https://github.com/appium/WebDriverAgent/issues/1085
+  if (FBConfiguration.sharedInstance.enforceCustomSnapshots) {
+    return [self fb_customSnapshot];
+  }
+  // https://github.com/appium/appium-xcuitest-driver/issues/2552
+  BOOL isValueRequest = [name isEqualToString:FBStringify(XCUIElement, wdValue)];
+  if ([self isKindOfClass:XCUIApplication.class] && !isValueRequest) {
+    return [self fb_standardSnapshot];
+  }
+  BOOL isCustomSnapshot = [name isEqualToString:FBStringify(XCUIElement, isWDAccessible)]
     || [name isEqualToString:FBStringify(XCUIElement, isWDAccessibilityContainer)]
-    || [name isEqualToString:FBStringify(XCUIElement, wdIndex)];
-  return [self fb_takeSnapshot:inDepth];
+    || [name isEqualToString:FBStringify(XCUIElement, wdIndex)]
+    || isValueRequest;
+  return isCustomSnapshot ? [self fb_customSnapshot] : [self fb_standardSnapshot];
 }
 
 - (id)fb_valueForWDAttributeName:(NSString *)name
@@ -64,6 +82,16 @@
   return [self valueForKey:[FBElementUtils wdAttributeNameForAttributeName:name]];
 }
 
+- (NSNumber *)wdMinValue
+{
+  return self.fb_minValue;
+}
+
+- (NSNumber *)wdMaxValue
+{
+  return self.fb_maxValue;
+}
+
 - (NSString *)wdValue
 {
   id value = self.value;
@@ -76,10 +104,7 @@
     value = FBFirstNonEmptyValue(value, isSelected);
   } else if (elementType == XCUIElementTypeSwitch) {
     value = @([value boolValue]);
-  } else if (elementType == XCUIElementTypeTextView ||
-             elementType == XCUIElementTypeTextField ||
-             elementType == XCUIElementTypeSearchField ||
-             elementType == XCUIElementTypeSecureTextField) {
+  } else if (FBDoesElementSupportInnerText(elementType)) {
     NSString *placeholderValue = self.placeholderValue;
     value = FBFirstNonEmptyValue(value, placeholderValue);
   }
@@ -107,12 +132,18 @@
 
 - (NSString *)wdLabel
 {
-  NSString *label = self.label;
   XCUIElementType elementType = self.elementType;
-  if (elementType == XCUIElementTypeTextField || elementType == XCUIElementTypeSecureTextField ) {
-    return label;
-  }
-  return FBTransferEmptyStringToNil(label);
+  return (elementType == XCUIElementTypeTextField
+          || elementType == XCUIElementTypeSecureTextField)
+    ? self.label
+    : FBTransferEmptyStringToNil(self.label);
+}
+
+- (NSString *)wdPlaceholderValue
+{
+  return FBDoesElementSupportInnerText(self.elementType)
+    ? self.placeholderValue
+    : FBTransferEmptyStringToNil(self.placeholderValue);
 }
 
 - (NSString *)wdType
@@ -137,6 +168,30 @@
     : CGRectIntegral(frame);
 }
 
+- (CGRect)wdNativeFrame
+{
+  // To avoid confusion regarding the frame returned by `wdFrame`,
+  // the current property is provided to represent the element's
+  // actual rendered frame.
+  return self.frame;
+}
+
+/**
+ Returns a comma-separated string of accessibility traits for the element.
+ This method converts the element's accessibility traits bitmask into human-readable strings
+ using FBAccessibilityTraitsToStringsArray. The traits represent various accessibility
+ characteristics of the element such as Button, Link, Image, etc.
+ You can find the list of possible traits in the Apple documentation:
+ https://developer.apple.com/documentation/uikit/uiaccessibilitytraits?language=objc
+
+ @return A comma-separated string of accessibility traits, or an empty string if no traits are set
+ */
+- (NSString *)wdTraits
+{
+  NSArray<NSString *> *traits = FBAccessibilityTraitsToStringsArray(self.snapshot.traits);
+  return [traits componentsJoinedByString:@", "];
+}
+
 - (BOOL)isWDVisible
 {
   return self.fb_isVisible;
@@ -145,6 +200,11 @@
 - (BOOL)isWDFocused
 {
   return self.hasFocus;
+}
+
+- (BOOL)isWDNativeAccessibilityElement
+{
+  return self.fb_isAccessibilityElement;
 }
 
 - (BOOL)isWDAccessible
@@ -230,5 +290,10 @@
     @"height": @(CGRectGetHeight(frame)),
   };
  }
+
+- (NSString *)wdCustomActions
+{
+    return self.fb_customActions;
+}
 
 @end

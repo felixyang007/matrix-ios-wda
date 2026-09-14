@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -94,10 +93,10 @@
 - (void)setUp
 {
   [super setUp];
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    [self openScrollView];
-  });
+  // Each test (and retry) must start at row zero, not at the previous test's
+  // scroll offset. A velocity-based swipe need not undo an earlier swipe.
+  [self resetOrientation];
+  [self openScrollView];
 }
 
 - (void)testSwipeUp

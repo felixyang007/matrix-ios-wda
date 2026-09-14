@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBVisibleFrame.h"
@@ -18,7 +17,7 @@
 
 - (CGRect)fb_visibleFrame
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:NO];
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
   return [FBXCElementSnapshotWrapper ensureWrapped:snapshot].fb_visibleFrame;
 }
 
@@ -30,13 +29,19 @@
 {
   CGRect thisVisibleFrame = [self visibleFrame];
   if (!CGRectIsEmpty(thisVisibleFrame)) {
-    return thisVisibleFrame;
+    return CGRectMake(CGRectGetMinX(thisVisibleFrame),
+                      CGRectGetMinY(thisVisibleFrame),
+                      CGRectGetWidth(thisVisibleFrame),
+                      CGRectGetHeight(thisVisibleFrame));
   }
 
   NSDictionary *visibleFrameDict = [self fb_attributeValue:FB_XCAXAVisibleFrameAttributeName
                                                      error:nil];
   if (nil == visibleFrameDict) {
-    return thisVisibleFrame;
+    return CGRectMake(CGRectGetMinX(thisVisibleFrame),
+                      CGRectGetMinY(thisVisibleFrame),
+                      CGRectGetWidth(thisVisibleFrame),
+                      CGRectGetHeight(thisVisibleFrame));
   }
 
   id x = [visibleFrameDict objectForKey:@"X"];
@@ -47,7 +52,10 @@
     return CGRectMake([x doubleValue], [y doubleValue], [width doubleValue], [height doubleValue]);
   }
 
-  return thisVisibleFrame;
+  return CGRectMake(CGRectGetMinX(thisVisibleFrame),
+                    CGRectGetMinY(thisVisibleFrame),
+                    CGRectGetWidth(thisVisibleFrame),
+                    CGRectGetHeight(thisVisibleFrame));
 }
 
 @end

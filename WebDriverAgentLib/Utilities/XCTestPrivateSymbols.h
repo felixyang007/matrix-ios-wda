@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <Foundation/Foundation.h>
@@ -21,6 +20,18 @@ extern NSString *FB_XCAXAIsElementAttributeName;
 
 /*!  Accessibility identifier for visible frame attribute */
 extern NSString *FB_XCAXAVisibleFrameAttributeName;
+
+/*! Accessibility identifier для минимума */
+extern NSNumber   *FB_XCAXACustomMinValueAttribute;
+extern NSString   *FB_XCAXACustomMinValueAttributeName;
+
+/*! Accessibility identifier для максимума */
+extern NSNumber   *FB_XCAXACustomMaxValueAttribute;
+extern NSString   *FB_XCAXACustomMaxValueAttributeName;
+
+/*! Accessibility identifier for custom actions attribute */
+extern NSNumber   *FB_XCAXACustomActionsAttribute;
+extern NSString   *FB_XCAXACustomActionsAttributeName;
 
 /*! Getter for  XCTest logger */
 extern id<XCDebugLogDelegate> (*XCDebugLogger)(void);
@@ -39,8 +50,8 @@ extern NSArray<NSNumber *> *(*XCAXAccessibilityAttributesForStringAttributes)(id
  */
 void *FBRetrieveXCTestSymbol(const char *name);
 
-/*! Static constructor that will retrieve XCTest private symbols */
-__attribute__((constructor)) void FBLoadXCTestSymbols(void);
+/*! Loads XCTest private symbols. Safe to call multiple times. */
+void FBLoadXCTestSymbols(void);
 
 /**
  Method is used to tranform attribute names into the format, which

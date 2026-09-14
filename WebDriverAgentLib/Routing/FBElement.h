@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <CoreGraphics/CoreGraphics.h>
@@ -19,6 +18,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 /*! Element's frame in normalized (rounded dimensions without Infinity values) CGRect format */
 @property (nonatomic, readonly, assign) CGRect wdFrame;
+
+/*! Represents the element's frame as a CGRect, preserving the actual values. */
+@property (nonatomic, readonly, assign) CGRect wdNativeFrame;
 
 /*! Element's wsFrame in NSDictionary format */
 @property (nonatomic, readonly, copy) NSDictionary *wdRect;
@@ -35,6 +37,9 @@ NS_ASSUME_NONNULL_BEGIN
 /*! Element's type */
 @property (nonatomic, readonly, copy) NSString *wdType;
 
+/*! Element's accessibility traits as a comma-separated string */
+@property (nonatomic, readonly, copy) NSString *wdTraits;
+
 /*! Element's value */
 @property (nonatomic, readonly, strong, nullable) NSString *wdValue;
 
@@ -50,6 +55,9 @@ NS_ASSUME_NONNULL_BEGIN
 /*! Whether element is accessible */
 @property (nonatomic, readonly, getter = isWDAccessible) BOOL wdAccessible;
 
+/*! The raw, native `isAccessibilityElement` value reported by the accessibility framework, without WebDriverAgent's custom computation applied by `wdAccessible` */
+@property (nonatomic, readonly, getter = isWDNativeAccessibilityElement) BOOL wdNativeAccessibilityElement;
+
 /*! Whether element is an accessibility container (contains children of any depth that are accessible) */
 @property (nonatomic, readonly, getter = isWDAccessibilityContainer) BOOL wdAccessibilityContainer;
 
@@ -61,6 +69,18 @@ NS_ASSUME_NONNULL_BEGIN
 
 /*! Element's index relatively to its parent. Starts from zero */
 @property (nonatomic, readonly) NSUInteger wdIndex;
+
+/*! Element's placeholder value */
+@property (nonatomic, readonly, copy, nullable) NSString *wdPlaceholderValue;
+
+/*! Element's minimum value */
+@property (nonatomic, readonly, strong, nullable) NSNumber *wdMinValue;
+
+/*! Element's maximum value */
+@property (nonatomic, readonly, strong, nullable) NSNumber *wdMaxValue;
+
+/*! Element's custom actions */
+@property (nonatomic, readonly, strong, nullable) NSString *wdCustomActions;
 
 /**
  Returns value of given property specified in WebDriver Spec

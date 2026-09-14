@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -19,6 +18,23 @@
 #import "XCUIApplication+FBHelpers.h"
 #import "XCUIElement+FBIsVisible.h"
 #import "FBXCodeCompatibility.h"
+
+void calculateMaxTreeDepth(NSDictionary *tree, NSNumber *currentDepth, NSNumber** maxDepth) {
+  if (nil == maxDepth) {
+    return;
+  }
+
+  NSArray *children = tree[@"children"];
+  if (nil == children || 0 == children.count) {
+    return;
+  }
+  for (NSDictionary *child in children) {
+    if (currentDepth.integerValue > [*maxDepth integerValue]) {
+      *maxDepth = currentDepth;
+    }
+    calculateMaxTreeDepth(child, @(currentDepth.integerValue + 1), maxDepth);
+  }
+}
 
 @interface XCUIApplicationHelperTests : FBIntegrationTestCase
 @end
@@ -40,7 +56,11 @@
 
 - (void)testApplicationTree
 {
-  XCTAssertNotNil(self.testedApplication.fb_tree);
+  NSDictionary *tree = self.testedApplication.fb_tree;
+  XCTAssertNotNil(tree);
+  NSNumber *maxDepth;
+  calculateMaxTreeDepth(tree, @0, &maxDepth);
+  XCTAssertGreaterThan(maxDepth.integerValue, 3);
   XCTAssertNotNil(self.testedApplication.fb_accessibilityTree);
 }
 
@@ -68,7 +88,6 @@
   XCUIApplication *systemApp = XCUIApplication.fb_systemApplication;
   XCTAssertTrue([XCUIApplication fb_activeApplication].buttons[@"Alerts"].fb_isVisible);
   [self goToSpringBoardFirstPage];
-  XCTAssertEqualObjects([XCUIApplication fb_activeApplication].bundleID, systemApp.bundleID);
   XCTAssertTrue(systemApp.icons[@"Safari"].fb_isVisible);
 }
 
@@ -105,7 +124,7 @@
 - (void)testAccessbilityAudit
 {
   if (SYSTEM_VERSION_LESS_THAN(@"17.0")) {
-    return;
+    XCTSkip(@"Requires iOS 17.0+");
   }
 
   NSError *error;

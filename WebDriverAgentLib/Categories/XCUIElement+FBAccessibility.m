@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBAccessibility.h"
@@ -18,7 +17,7 @@
 
 - (BOOL)fb_isAccessibilityElement
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:NO];
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
   return [FBXCElementSnapshotWrapper ensureWrapped:snapshot].fb_isAccessibilityElement;
 }
 

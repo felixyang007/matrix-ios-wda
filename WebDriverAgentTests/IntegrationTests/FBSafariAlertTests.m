@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -43,8 +42,12 @@
   [self.session terminateApplicationWithBundleId:FB_SAFARI_BUNDLE_ID];
 }
 
-- (void)disabled_testCanHandleSafariInputPrompt
+- (void)testCanHandleSafariInputPrompt
 {
+  if (FBIntegrationTestCase.isRunningInCI) {
+    XCTSkip(@"Depends on an external website (w3schools.com), unreliable on CI");
+  }
+
   XCUIElement *urlInput = [[self.safariApp
                             descendantsMatchingType:XCUIElementTypeTextField]
                            matchingPredicate:[
@@ -68,7 +71,7 @@
   XCTAssertEqualObjects(buttonLabels.firstObject, @"Close");
   XCTAssertNotNil([self.safariApp fb_descendantsMatchingXPathQuery:@"//XCUIElementTypeButton[@label='Close']"
                                        shouldReturnAfterFirstMatch:YES].firstObject);
-  XCTAssertTrue([alert acceptWithError:nil]);
+  XCTAssertNoThrow([alert accept]);
 }
 
 @end

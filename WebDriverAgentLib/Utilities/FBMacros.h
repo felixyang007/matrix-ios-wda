@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 // Typedef to help with storing constant strings for enums.
@@ -43,12 +42,21 @@
   typeof(arg) arg = wda_weak_##arg \
   _Pragma("clang diagnostic pop")
 
+/*! Current OS version as a dotted string, e.g. "17.4". UIDevice.systemVersion is unavailable on
+    watchOS, so this is sourced from NSProcessInfo, which works identically on every platform. */
+NS_INLINE NSString *FBSystemVersion(void) {
+  NSOperatingSystemVersion v = NSProcessInfo.processInfo.operatingSystemVersion;
+  return 0 == v.patchVersion
+    ? [NSString stringWithFormat:@"%ld.%ld", (long)v.majorVersion, (long)v.minorVersion]
+    : [NSString stringWithFormat:@"%ld.%ld.%ld", (long)v.majorVersion, (long)v.minorVersion, (long)v.patchVersion];
+}
+
 /*! Returns YES if current system version satisfies the given codition */
-#define SYSTEM_VERSION_EQUAL_TO(v)                  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedSame)
-#define SYSTEM_VERSION_GREATER_THAN(v)              ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedDescending)
-#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
-#define SYSTEM_VERSION_LESS_THAN(v)                 ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
-#define SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(v)     ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedDescending)
+#define SYSTEM_VERSION_EQUAL_TO(v)                  ([FBSystemVersion() compare:v options:NSNumericSearch] == NSOrderedSame)
+#define SYSTEM_VERSION_GREATER_THAN(v)              ([FBSystemVersion() compare:v options:NSNumericSearch] == NSOrderedDescending)
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([FBSystemVersion() compare:v options:NSNumericSearch] != NSOrderedAscending)
+#define SYSTEM_VERSION_LESS_THAN(v)                 ([FBSystemVersion() compare:v options:NSNumericSearch] == NSOrderedAscending)
+#define SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(v)     ([FBSystemVersion() compare:v options:NSNumericSearch] != NSOrderedDescending)
 
 /*! Converts the given number of milliseconds into seconds */
 #define FBMillisToSeconds(ms) ((ms) / 1000.0)

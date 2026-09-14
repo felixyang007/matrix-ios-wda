@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBScreenRecordingRequest.h"
@@ -47,7 +46,7 @@
   [videoEncodingInitInvocation setSelector:videoEncodingConstructorSelector];
   long long codec = self.codec;
   [videoEncodingInitInvocation setArgument:&codec atIndex:2];
-  double frameRate = self.fps;
+  double frameRate = (double)self.fps;
   [videoEncodingInitInvocation setArgument:&frameRate atIndex:3];
   [videoEncodingInitInvocation invokeWithTarget:videoEncodingAllocated];
   id __unsafe_unretained result;

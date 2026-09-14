@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBUtilities.h"
@@ -44,28 +43,39 @@
 
 @implementation XCUIElement (FBUtilities)
 
-- (id<FBXCElementSnapshot>)fb_takeSnapshot:(BOOL)inDepth
+- (id<FBXCElementSnapshot>)fb_takeSnapshot:(BOOL)isCustom
 {
   __block id<FBXCElementSnapshot> snapshot = nil;
   @autoreleasepool {
     NSError *error = nil;
-    snapshot = inDepth
+    snapshot = isCustom
       ? [self.fb_query fb_uniqueSnapshotWithError:&error]
       : (id<FBXCElementSnapshot>)[self snapshotWithError:&error];
     if (nil == snapshot) {
-      NSString *hintText = @"Make sure the application UI has the expected state";
-      if (nil != error && [error.localizedDescription containsString:@"Identity Binding"]) {
-        hintText = [NSString stringWithFormat:@"%@. You could also try to switch the binding strategy using the 'boundElementsByIndex' setting for the element lookup", hintText];
-      }
-      NSString *reason = [NSString stringWithFormat:@"The previously found element \"%@\" is not present in the current view anymore. %@",
-                          self.description, hintText];
-      if (nil != error) {
-        reason = [NSString stringWithFormat:@"%@. Original error: %@", reason, error.localizedDescription];
-      }
-      @throw [NSException exceptionWithName:FBStaleElementException reason:reason userInfo:@{}];
+      [self fb_raiseStaleElementExceptionWithError:error];
     }
   }
   self.lastSnapshot = snapshot;
+  return self.lastSnapshot;
+}
+
+- (id<FBXCElementSnapshot>)fb_standardSnapshot
+{
+  return [self fb_takeSnapshot:NO];
+}
+
+- (id<FBXCElementSnapshot>)fb_customSnapshot
+{
+  return [self fb_takeSnapshot:YES];
+}
+
+- (id<FBXCElementSnapshot>)fb_nativeSnapshot
+{
+  NSError *error = nil;
+  BOOL isSuccessful = [self resolveOrRaiseTestFailure:NO error:&error];
+  if (nil == self.lastSnapshot || !isSuccessful) {
+    [self fb_raiseStaleElementExceptionWithError:error];
+  }
   return self.lastSnapshot;
 }
 
@@ -90,9 +100,11 @@
     }
   }
   NSMutableArray<XCUIElement *> *matchedElements = [NSMutableArray array];
-  NSString *uid = nil == self.lastSnapshot
+  // self.lastSnapshot may be stale leftover from an unrelated earlier command.
+  id<FBXCElementSnapshot> selfSnapshot = self.fb_cachedSnapshot;
+  NSString *uid = nil == selfSnapshot
     ? self.fb_uid
-    : [FBXCElementSnapshotWrapper wdUIDWithSnapshot:self.lastSnapshot];
+    : [FBXCElementSnapshotWrapper wdUIDWithSnapshot:selfSnapshot];
   if (nil != uid && [matchedIds containsObject:uid]) {
     XCUIElement *stableSelf = [self fb_stableInstanceWithUid:uid];
     if (1 == snapshots.count) {
@@ -103,7 +115,7 @@
   XCUIElementType type = XCUIElementTypeAny;
   NSArray<NSNumber *> *uniqueTypes = [snapshots valueForKeyPath:[NSString stringWithFormat:@"@distinctUnionOfObjects.%@", FBStringify(XCUIElement, elementType)]];
   if (uniqueTypes && [uniqueTypes count] == 1) {
-    type = [uniqueTypes.firstObject intValue];
+    type = (XCUIElementType)[uniqueTypes.firstObject intValue];
   }
   XCUIElementQuery *query = onlyChildren
     ? [self.fb_query childrenMatchingType:type]
@@ -120,7 +132,7 @@
 
 - (void)fb_waitUntilStable
 {
-  [self fb_waitUntilStableWithTimeout:FBConfiguration.waitForIdleTimeout];
+  [self fb_waitUntilStableWithTimeout:FBConfiguration.sharedInstance.waitForIdleTimeout];
 }
 
 - (void)fb_waitUntilStableWithTimeout:(NSTimeInterval)timeout
@@ -129,9 +141,9 @@
     return;
   }
 
-  NSTimeInterval previousTimeout = FBConfiguration.waitForIdleTimeout;
+  NSTimeInterval previousTimeout = FBConfiguration.sharedInstance.waitForIdleTimeout;
   BOOL previousQuiescence = self.application.fb_shouldWaitForQuiescence;
-  FBConfiguration.waitForIdleTimeout = timeout;
+  FBConfiguration.sharedInstance.waitForIdleTimeout = timeout;
   if (!previousQuiescence) {
     self.application.fb_shouldWaitForQuiescence = YES;
   }
@@ -140,7 +152,21 @@
   if (previousQuiescence != self.application.fb_shouldWaitForQuiescence) {
     self.application.fb_shouldWaitForQuiescence = previousQuiescence;
   }
-  FBConfiguration.waitForIdleTimeout = previousTimeout;
+  FBConfiguration.sharedInstance.waitForIdleTimeout = previousTimeout;
+}
+
+- (void)fb_raiseStaleElementExceptionWithError:(NSError *)error __attribute__((noreturn))
+{
+  NSString *hintText = @"Make sure the application UI has the expected state";
+  if (nil != error && [error.localizedDescription containsString:@"Identity Binding"]) {
+    hintText = [NSString stringWithFormat:@"%@. You could also try to switch the binding strategy using the 'boundElementsByIndex' setting for the element lookup", hintText];
+  }
+  NSString *reason = [NSString stringWithFormat:@"The previously found element \"%@\" is not present in the current view anymore. %@",
+                      self.description, hintText];
+  if (nil != error) {
+    reason = [NSString stringWithFormat:@"%@. Original error: %@", reason, error.localizedDescription];
+  }
+  @throw [NSException exceptionWithName:FBStaleElementException reason:reason userInfo:@{}];
 }
 
 @end

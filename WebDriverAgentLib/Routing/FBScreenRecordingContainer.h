@@ -4,8 +4,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <Foundation/Foundation.h>
@@ -44,6 +43,15 @@ NS_ASSUME_NONNULL_BEGIN
  Resets the current screen recording promise
  */
 - (void)reset;
+
+/**
+ Resets the container, but only if it still keeps the given promise. The comparison and the
+ reset are performed atomically, so a promise stored concurrently is never dropped.
+
+ @param screenRecordingPromise the promise the caller expects to be still active
+ @return YES if the container has been reset
+ */
+- (BOOL)resetIfPromiseIs:(FBScreenRecordingPromise *)screenRecordingPromise;
 
 /**
  Transforms the container content to a dictionary.

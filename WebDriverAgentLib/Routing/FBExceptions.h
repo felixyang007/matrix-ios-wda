@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -57,5 +56,14 @@ extern NSString *const FBApplicationMissingException;
 
 /*! Exception used to notify about WDA incompatibility with the current platform version */
 extern NSString *const FBIncompatibleWdaException;
+
+/*! Exception used to notify that no alert is currently present */
+extern NSString *const FBAlertNotPresentException;
+
+/*! Exception used to notify that an alert action (e.g. finding a button to tap) could not complete, although the alert itself is present */
+extern NSString *const FBAlertActionFailedException;
+
+/*! Exception used to notify that typing text into an alert failed (e.g. no or multiple input fields) */
+extern NSString *const FBAlertSetTextFailedException;
 
 NS_ASSUME_NONNULL_END

@@ -3,15 +3,14 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-#if !TARGET_OS_TV
+#if !TARGET_OS_TV && !TARGET_OS_WATCH
 @interface XCUIDevice (FBRotation)
 
 /**
@@ -32,6 +31,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 /*! The UIDeviceOrientation to rotation mappings */
 @property (strong, nonatomic, readonly) NSDictionary *fb_rotationMapping;
+
+/**
+ The current physical device orientation as the raw UIDeviceOrientation name string,
+ e.g. UIDeviceOrientationPortrait, UIDeviceOrientationLandscapeLeft,
+ UIDeviceOrientationFaceUp. Returns UIDeviceOrientationUnknown if the orientation
+ cannot be determined.
+ */
+@property (copy, nonatomic, readonly) NSString *fb_deviceOrientation;
 
 @end
 #endif

@@ -3,13 +3,11 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBCapabilities.h"
 
-NSString* const FB_CAP_USE_TEST_MANAGER_FOR_VISIBLITY_DETECTION = @"shouldUseTestManagerForVisibilityDetection";
 NSString* const FB_CAP_MAX_TYPING_FREQUENCY = @"maxTypingFrequency";
 NSString* const FB_CAP_USE_SINGLETON_TEST_MANAGER = @"shouldUseSingletonTestManager";
 NSString* const FB_CAP_DISABLE_AUTOMATIC_SCREENSHOTS = @"disableAutomaticScreenshots";

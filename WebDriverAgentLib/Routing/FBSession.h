@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <Foundation/Foundation.h>
@@ -16,6 +15,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 /** Bundle identifier of Mobile Safari browser */
 extern NSString* const FB_SAFARI_BUNDLE_ID;
+
+/**
+ Posted (synchronously, on whatever thread calls -kill) once a session has been torn down. The
+ notification's object is the FBSession instance that was killed - see -identifier.
+ */
+extern NSString* const FBSessionWasKilledNotification;
 
 /**
  Class that represents testing session
@@ -44,6 +49,16 @@ extern NSString* const FB_SAFARI_BUNDLE_ID;
 @property (nonatomic, readonly) NSMutableDictionary<NSNumber *, NSMutableDictionary<NSString *, NSNumber *> *> *elementsVisibilityCache;
 
 + (nullable instancetype)activeSession;
+
+/**
+ Kills the active session, if any, and blocks until its teardown - including one already started
+ by a concurrent caller - is fully finished. Call this before preparing/launching a replacement
+ application, so it can't race a still-in-progress termination of the outgoing one.
+
+ @throws FBSessionCreationException if the outgoing application's termination is still in flight
+ after the wait, since a replacement must never start while that termination can still land.
+ */
++ (void)killActiveSessionAndWaitForTeardown;
 
 /**
  Fetches session for given identifier.
@@ -120,6 +135,22 @@ extern NSString* const FB_SAFARI_BUNDLE_ID;
          for more details on possible enum values
  */
 - (NSUInteger)applicationStateWithBundleId:(NSString *)bundleIdentifier;
+
+/**
+ Allows to enable automated session alerts monitoring.
+ Repeated calls are ignored if alerts monitoring has been already enabled.
+
+ @returns YES if the actual alerts monitoring state has been changed
+ */
+- (BOOL)enableAlertsMonitor;
+
+/**
+ Allows to disable automated alerts monitoring
+ Repeated calls are ignored if alerts monitoring has been already disabled.
+
+ @returns YES if the actual alerts monitoring state has been changed
+ */
+- (BOOL)disableAlertsMonitor;
 
 @end
 

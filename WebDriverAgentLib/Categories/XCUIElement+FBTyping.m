@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBTyping.h"
@@ -90,8 +89,12 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
 #if !TARGET_OS_TV
   [FBLogger logFmt:@"Trying to tap the \"%@\" element to have it focused", snapshot.fb_description];
   [self tap];
+#if TARGET_OS_WATCH
+  // watchOS presents a full-screen keyboard sheet (a modal transition) - wait for it.
+  [self fb_waitUntilStableWithTimeout:2.0];
+#endif
   // It might take some time to update the UI
-  [self fb_takeSnapshot:NO];
+  [self fb_standardSnapshot];
 #endif
 }
 
@@ -101,7 +104,7 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
 {
   return [self fb_typeText:text
                shouldClear:shouldClear
-                 frequency:FBConfiguration.maxTypingFrequency
+                 frequency:FBConfiguration.sharedInstance.maxTypingFrequency
                      error:error];
 }
 
@@ -110,18 +113,48 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
           frequency:(NSUInteger)frequency
               error:(NSError **)error
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:NO];
+  // No snapshot was handed to us, so there is nothing to safely reuse -
+  // always fetch a fresh one.
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
+  return [self fb_typeText:text
+               shouldClear:shouldClear
+                 frequency:frequency
+                  snapshot:snapshot
+                     error:error];
+}
+
+- (BOOL)fb_typeText:(NSString *)text
+        shouldClear:(BOOL)shouldClear
+          frequency:(NSUInteger)frequency
+           snapshot:(id<FBXCElementSnapshot>)snapshot
+              error:(NSError **)error
+{
   FBXCElementSnapshotWrapper *wrapped = [FBXCElementSnapshotWrapper ensureWrapped:snapshot];
   [self fb_prepareForTextInputWithSnapshot:wrapped];
   if (shouldClear && ![self fb_clearTextWithSnapshot:wrapped shouldPrepareForInput:NO error:error]) {
     return NO;
   }
+#if TARGET_OS_WATCH
+  // FBTypeText's low-level key synthesis never reaches watchOS's keyboard; -typeText: is a
+  // partial workaround (keystrokes still don't always land - a known limitation).
+  [self typeText:text];
+  return YES;
+#else
   return FBTypeText(text, frequency, error);
+#endif
 }
 
 - (BOOL)fb_clearTextWithError:(NSError **)error
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:NO];
+  // No snapshot was handed to us, so there is nothing to safely reuse -
+  // always fetch a fresh one.
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
+  return [self fb_clearTextWithSnapshot:snapshot error:error];
+}
+
+- (BOOL)fb_clearTextWithSnapshot:(id<FBXCElementSnapshot>)snapshot
+                            error:(NSError **)error
+{
   return [self fb_clearTextWithSnapshot:[FBXCElementSnapshotWrapper ensureWrapped:snapshot]
                   shouldPrepareForInput:YES
                                   error:error];
@@ -162,7 +195,7 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
       [self fb_prepareForTextInputWithSnapshot:snapshot];
     }
 
-    if (retry == 0 && FBConfiguration.useClearTextShortcut) {
+    if (retry == 0 && FBConfiguration.sharedInstance.useClearTextShortcut) {
       // 1st attempt is via the IOHIDEvent as the fastest operation
       // https://github.com/appium/appium/issues/19389
       [[XCUIDevice sharedDevice] fb_performIOHIDEventWithPage:0x07  // kHIDPage_KeyboardOrKeypad
@@ -172,13 +205,13 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
     } else if (retry >= MAX_CLEAR_RETRIES - 1) {
       // Last chance retry. Tripple-tap the field to select its content
       [self tapWithNumberOfTaps:3 numberOfTouches:1];
-      return FBTypeText(backspaceDeleteSequence, FBConfiguration.defaultTypingFrequency, error);
-    } else if (!FBTypeText(backspacesToType, FBConfiguration.defaultTypingFrequency, error)) {
+      return FBTypeText(backspaceDeleteSequence, FBConfiguration.sharedInstance.defaultTypingFrequency, error);
+    } else if (!FBTypeText(backspacesToType, FBConfiguration.sharedInstance.defaultTypingFrequency, error)) {
       // 2nd operation
       return NO;
     }
 
-    currentValue = [self fb_takeSnapshot:NO].value;
+    currentValue = [self fb_standardSnapshot].value;
     if (nil != placeholderValue && [currentValue isEqualToString:placeholderValue]) {
       // Short circuit if only the placeholder value left
       return YES;
@@ -193,7 +226,7 @@ BOOL FBTypeText(NSString *text, NSUInteger typingSpeed, NSError **error)
   // kHIDPage_KeyboardOrKeypad did not work for tvOS's search field. (tvOS 17 at least)
   // Tested XCUIElementTypeSearchField and XCUIElementTypeTextView whch were
   // common search field and email/passowrd input in tvOS apps.
-  return FBTypeText(backspacesToType, FBConfiguration.defaultTypingFrequency, error);
+  return FBTypeText(backspacesToType, FBConfiguration.sharedInstance.defaultTypingFrequency, error);
 #endif
 }
 

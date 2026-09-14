@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <Foundation/Foundation.h>
@@ -28,20 +27,29 @@
 @property (nonatomic, strong, readwrite, nullable) NSString *wdValue;
 @property (nonatomic, readwrite, getter=isWDEnabled) BOOL wdEnabled;
 @property (nonatomic, readwrite, getter=isWDSelected) BOOL wdSelected;
+@property (nonatomic, readwrite, assign) CGRect wdNativeFrame;
 @property (nonatomic, readwrite) NSUInteger wdIndex;
 @property (nonatomic, readwrite, getter=isWDVisible) BOOL wdVisible;
 @property (nonatomic, readwrite, getter=isWDAccessible) BOOL wdAccessible;
+@property (nonatomic, readwrite, getter=isWDNativeAccessibilityElement) BOOL wdNativeAccessibilityElement;
 @property (nonatomic, readwrite, getter = isWDFocused) BOOL wdFocused;
 @property (nonatomic, readwrite, getter = isWDHittable) BOOL wdHittable;
+@property (nonatomic, copy, readwrite, nullable) NSString *wdPlaceholderValue;
 @property (copy, nonnull) NSArray *children;
 @property (nonatomic, readwrite, assign) XCUIElementType elementType;
 @property (nonatomic, readwrite, getter=isWDAccessibilityContainer) BOOL wdAccessibilityContainer;
+@property (nonatomic, copy, readwrite, nullable) NSString *wdTraits;
+@property (nonatomic, strong, readwrite, nullable) NSString *wdCustomActions;
 
 - (void)resolve;
-- (id _Nonnull)fb_takeSnapshot:(BOOL)inDepth;
+- (id _Nonnull)fb_standardSnapshot;
+- (id _Nonnull)fb_customSnapshot;
 - (nullable id)query;
+- (void)typeKey:(nonnull NSString *)key modifierFlags:(NSUInteger)modifierFlags;
 
 // Checks
 @property (nonatomic, assign, readonly) BOOL didResolve;
+@property (nonatomic, copy, readonly, nonnull) NSArray<NSString *> *typedKeys;
+@property (nonatomic, assign, readonly) NSUInteger lastTypedModifierFlags;
 
 @end

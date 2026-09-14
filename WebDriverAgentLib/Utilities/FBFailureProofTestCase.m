@@ -3,13 +3,15 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBFailureProofTestCase.h"
 
 #import "FBLogger.h"
+#import "XCTIssue.h"
+#import "XCTSourceCodeContext.h"
+#import "XCTSourceCodeLocation.h"
 
 @implementation FBFailureProofTestCase
 
@@ -46,6 +48,8 @@
 /**
  Override 'recordFailureWithDescription' to not stop by failures.
  */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)recordFailureWithDescription:(NSString *)description
                               inFile:(NSString *)filePath
                               atLine:(NSUInteger)lineNumber
@@ -53,6 +57,7 @@
 {
   [self _enqueueFailureWithDescription:description inFile:filePath atLine:lineNumber expected:expected];
 }
+#pragma clang diagnostic pop
 
 /**
  Private XCTestCase method used to block and tunnel failure messages

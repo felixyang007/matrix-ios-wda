@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -59,7 +58,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)mergeTreeWithSnapshot:(id)arg1;
 - (id)_childMatchingElement:(id)arg1;
 - (NSArray<id<FBXCElementSnapshot>> *)_allDescendants;
-- (BOOL)hasDescendantMatchingFilter:(CDUnknownBlockType)arg1;
+- (BOOL)hasDescendantMatchingFilter:(BOOL(^)(id<FBXCElementSnapshot> snapshot))arg1;
 - (NSArray<id<FBXCElementSnapshot>> *)descendantsByFilteringWithBlock:(BOOL(^)(id<FBXCElementSnapshot> snapshot))block;
 - (id)elementSnapshotMatchingAccessibilityElement:(id)arg1;
 - (void)enumerateDescendantsUsingBlock:(void(^)(id<FBXCElementSnapshot> snapshot))block;

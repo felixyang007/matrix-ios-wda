@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <Foundation/Foundation.h>
@@ -27,6 +26,9 @@ typedef __nonnull id<FBResponsePayload> (^FBRouteSyncHandler)(FBRouteRequest *re
 
 /*! Route's path */
 @property (nonatomic, copy, readonly) NSString *path;
+
+/*! Whether this route bypasses the shared route queue - see -standalone */
+@property (nonatomic, assign, readonly) BOOL isStandalone;
 
 /**
  Convenience constructor for GET route with given pathPattern
@@ -67,6 +69,12 @@ typedef __nonnull id<FBResponsePayload> (^FBRouteSyncHandler)(FBRouteRequest *re
  Chain-able constructor for route that does NOT require session
  */
 - (instancetype)withoutSession;
+
+/**
+ Chain-able constructor for a route that bypasses the shared route queue - see FBHTTPServer.h's
+ -handleMethod:withPath:standalone:block: for what that changes about how/when the handler runs.
+ */
+- (instancetype)standalone;
 
 /**
  Dispatches response for request

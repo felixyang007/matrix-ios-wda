@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBTVFocuse.h"
@@ -25,7 +24,7 @@ int const MAX_ITERATIONS_COUNT = 100;
 
 - (BOOL)fb_setFocusWithError:(NSError**) error
 {
-  [XCUIApplication.fb_activeApplication fb_waitUntilStableWithTimeout:FBConfiguration.animationCoolOffTimeout];
+  [XCUIApplication.fb_activeApplication fb_waitUntilStableWithTimeout:FBConfiguration.sharedInstance.animationCoolOffTimeout];
 
   if (!self.wdEnabled) {
     if (error) {
@@ -37,12 +36,13 @@ int const MAX_ITERATIONS_COUNT = 100;
 
   FBTVNavigationTracker *tracker = [FBTVNavigationTracker trackerWithTargetElement:self];
   for (int i = 0; i < MAX_ITERATIONS_COUNT; i++) {
-    // Here hasFocus works so far. Maybe, it is because it is handled by `XCUIRemote`...
-    if (self.hasFocus) {
+    FBTVDirection direction = FBTVDirectionNone;
+    FBTVFocusState focusState = [tracker pollFocusState:&direction];
+    if (focusState == FBTVFocusStateFocused) {
       return YES;
     }
 
-    if (!self.exists) {
+    if (focusState == FBTVFocusStateGone) {
       if (error) {
         *error = [[FBErrorBuilder.builder withDescription:
                    [NSString stringWithFormat:@"'%@' element is not reachable because it does not exist. Try to use XCUIRemote commands.", self.description]] build];
@@ -50,7 +50,6 @@ int const MAX_ITERATIONS_COUNT = 100;
       return NO;
     }
 
-    FBTVDirection direction = tracker.directionToFocusedElement;
     if (direction != FBTVDirectionNone) {
       [[XCUIRemote sharedRemote] pressButton: (XCUIRemoteButton)direction];
     }

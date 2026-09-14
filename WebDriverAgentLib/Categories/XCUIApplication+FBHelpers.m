@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIApplication+FBHelpers.h"
@@ -24,7 +23,7 @@
 #import "FBXCElementSnapshotWrapper+Helpers.h"
 #import "FBXCAXClientProxy.h"
 #import "FBXMLGenerationOptions.h"
-#import "XCTestManager_ManagerInterface-Protocol.h"
+#import "XCTMessagingChannel_RunnerToDaemon-Protocol.h"
 #import "XCTestPrivateSymbols.h"
 #import "XCTRunnerDaemonSession.h"
 #import "XCUIApplication.h"
@@ -34,9 +33,11 @@
 #import "XCUIElement.h"
 #import "XCUIElement+FBCaching.h"
 #import "XCUIElement+FBIsVisible.h"
+#import "XCUIElement+FBUID.h"
 #import "XCUIElement+FBUtilities.h"
 #import "XCUIElement+FBWebDriverAttributes.h"
 #import "XCUIElementQuery.h"
+#import "FBElementHelpers.h"
 
 static NSString* const FBUnknownBundleId = @"unknown";
 
@@ -44,8 +45,20 @@ static NSString* const FBExclusionAttributeFrame = @"frame";
 static NSString* const FBExclusionAttributeEnabled = @"enabled";
 static NSString* const FBExclusionAttributeVisible = @"visible";
 static NSString* const FBExclusionAttributeAccessible = @"accessible";
+static NSString* const FBExclusionAttributeNativeAccessibilityElement = @"nativeAccessibilityElement";
 static NSString* const FBExclusionAttributeFocused = @"focused";
+static NSString* const FBExclusionAttributePlaceholderValue = @"placeholderValue";
+static NSString* const FBExclusionAttributeNativeFrame = @"nativeFrame";
+static NSString* const FBExclusionAttributeTraits = @"traits";
+static NSString* const FBExclusionAttributeMinValue = @"minValue";
+static NSString* const FBExclusionAttributeMaxValue = @"maxValue";
 
+static NSString *FBJsonPrefixedAttributeKey(NSString *key)
+{
+  return [NSString stringWithFormat:@"is%@%@",
+          [[key substringToIndex:1] uppercaseString],
+          [key substringFromIndex:1]];
+}
 
 _Nullable id extractIssueProperty(id issue, NSString *propertyName) {
   SEL selector = NSSelectorFromString(propertyName);
@@ -131,7 +144,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
 + (NSArray<NSDictionary<NSString *, id> *> *)fb_appsInfoWithAxElements:(NSArray<id<FBXCAccessibilityElement>> *)axElements
 {
   NSMutableArray<NSDictionary<NSString *, id> *> *result = [NSMutableArray array];
-  id<XCTestManager_ManagerInterface> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
+  id<XCTMessagingChannel_RunnerToDaemon> proxy = [FBXCTestDaemonsProxy testRunnerProxy];
   for (id<FBXCAccessibilityElement> axElement in axElements) {
     NSMutableDictionary<NSString *, id> *appInfo = [NSMutableDictionary dictionary];
     pid_t pid = axElement.processIdentifier;
@@ -176,7 +189,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
 
 - (NSDictionary *)fb_tree:(nullable NSSet<NSString *> *)excludedAttributes
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:YES];
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
   return [self.class dictionaryForElement:snapshot
                                 recursive:YES
                        excludedAttributes:excludedAttributes];
@@ -184,7 +197,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
 
 - (NSDictionary *)fb_accessibilityTree
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:YES];
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
   return [self.class accessibilityInfoForElement:snapshot];
 }
 
@@ -200,32 +213,26 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
   info[@"value"] = FBValueOrNull(wrappedSnapshot.wdValue);
   info[@"label"] = FBValueOrNull(wrappedSnapshot.wdLabel);
   info[@"rect"] = wrappedSnapshot.wdRect;
+  info[@"customActions"] = FBValueOrNull(wrappedSnapshot.wdCustomActions);
   
-  NSDictionary<NSString *, NSString * (^)(void)> *attributeBlocks = @{
-      FBExclusionAttributeFrame: ^{
-          return NSStringFromCGRect(wrappedSnapshot.wdFrame);
-      },
-      FBExclusionAttributeEnabled: ^{
-          return [@([wrappedSnapshot isWDEnabled]) stringValue];
-      },
-      FBExclusionAttributeVisible: ^{
-          return [@([wrappedSnapshot isWDVisible]) stringValue];
-      },
-      FBExclusionAttributeAccessible: ^{
-          return [@([wrappedSnapshot isWDAccessible]) stringValue];
-      },
-      FBExclusionAttributeFocused: ^{
-          return [@([wrappedSnapshot isWDFocused]) stringValue];
-      }
-  };
+  NSDictionary<NSString *, NSString *(^)(void)> *attributeBlocks = [self fb_attributeBlockMapForWrappedSnapshot:wrappedSnapshot];
+
+  NSSet *nonPrefixedKeys = [NSSet setWithObjects:
+                            FBExclusionAttributeFrame,
+                            FBExclusionAttributePlaceholderValue,
+                            FBExclusionAttributeNativeFrame,
+                            FBExclusionAttributeTraits,
+                            FBExclusionAttributeMinValue,
+                            FBExclusionAttributeMaxValue,
+                            nil];
 
   for (NSString *key in attributeBlocks) {
       if (excludedAttributes == nil || ![excludedAttributes containsObject:key]) {
           NSString *value = ((NSString * (^)(void))attributeBlocks[key])();
-          if ([key isEqualToString:FBExclusionAttributeFrame]) {
+          if ([nonPrefixedKeys containsObject:key]) {
               info[key] = value;
           } else {
-              info[[NSString stringWithFormat:@"is%@", [key capitalizedString]]] = value;
+              info[FBJsonPrefixedAttributeKey(key)] = value;
           }
       }
   }
@@ -246,6 +253,62 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
     }
   }
   return info;
+}
+
+// Helper used by `dictionaryForElement:` to assemble attribute value blocks,
+// including both common attributes and conditionally included ones like placeholderValue.
++ (NSDictionary<NSString *, NSString *(^)(void)> *)fb_attributeBlockMapForWrappedSnapshot:(FBXCElementSnapshotWrapper *)wrappedSnapshot
+
+{
+  // Base attributes common to every element
+  NSMutableDictionary<NSString *, id(^)(void)> *blocks =
+  [@{
+    FBExclusionAttributeFrame: ^{
+    return NSStringFromCGRect(wrappedSnapshot.wdFrame);
+  },
+    FBExclusionAttributeNativeFrame: ^{
+    return NSStringFromCGRect(wrappedSnapshot.wdNativeFrame);
+  },
+    FBExclusionAttributeEnabled: ^{
+    return [@([wrappedSnapshot isWDEnabled]) stringValue];
+  },
+    FBExclusionAttributeVisible: ^{
+    return [@([wrappedSnapshot isWDVisible]) stringValue];
+  },
+    FBExclusionAttributeAccessible: ^{
+    return [@([wrappedSnapshot isWDAccessible]) stringValue];
+  },
+    FBExclusionAttributeNativeAccessibilityElement: ^{
+    return [@([wrappedSnapshot isWDNativeAccessibilityElement]) stringValue];
+  },
+    FBExclusionAttributeFocused: ^{
+    return [@([wrappedSnapshot isWDFocused]) stringValue];
+  },
+    FBExclusionAttributeTraits: ^{
+    return wrappedSnapshot.wdTraits;
+  }
+  } mutableCopy];
+  
+  XCUIElementType elementType = wrappedSnapshot.elementType;
+  
+  // Text-input placeholder (only for elements that support inner text)
+  if (FBDoesElementSupportInnerText(elementType)) {
+    blocks[FBExclusionAttributePlaceholderValue] = ^{
+      return (NSString *)FBValueOrNull(wrappedSnapshot.wdPlaceholderValue);
+    };
+  }
+  
+  // Only for elements that support min/max value
+  if (FBDoesElementSupportMinMaxValue(elementType)) {
+    blocks[FBExclusionAttributeMinValue] = ^{
+      return wrappedSnapshot.wdMinValue;
+    };
+    blocks[FBExclusionAttributeMaxValue] = ^{
+      return wrappedSnapshot.wdMaxValue;
+    };
+  }
+  
+  return [blocks copy];
 }
 
 + (NSDictionary *)accessibilityInfoForElement:(id<FBXCElementSnapshot>)snapshot
@@ -372,6 +435,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
     }
   }
   
+#if !TARGET_OS_WATCH
   if ([UIDevice.currentDevice userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
     NSPredicate *searchPredicate = [NSPredicate predicateWithFormat:@"elementType IN %@",
                                     @[@(XCUIElementTypeKey), @(XCUIElementTypeButton)]];
@@ -380,6 +444,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
       [matchedKeys[matchedKeys.count - 1] tap];
     }
   }
+#endif
 #endif
   NSString *errorDescription = @"Did not know how to dismiss the keyboard. Try to dismiss it in the way supported by your application under test.";
   return [[[[FBRunLoopSpinner new]
@@ -434,7 +499,7 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
       
       id extractedElement = extractIssueProperty(issue, @"element");
       
-      id<FBXCElementSnapshot> elementSnapshot = [extractedElement fb_cachedSnapshot] ?: [extractedElement fb_takeSnapshot:NO];
+      id<FBXCElementSnapshot> elementSnapshot = [extractedElement fb_cachedSnapshot] ?: [extractedElement fb_standardSnapshot];
       NSDictionary *elementAttributes = elementSnapshot
       ? [self.class dictionaryForElement:elementSnapshot
                                recursive:NO
@@ -570,23 +635,17 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
 {
   XCUIApplication *systemApp = self.fb_systemApplication;
   @try {
-    if (!systemApp.running) {
-      [systemApp launch];
-    } else {
+    if (systemApp.running) {
       [systemApp activate];
+    } else {
+      [systemApp launch];
     }
   } @catch (NSException *e) {
     return [[[FBErrorBuilder alloc]
              withDescription:nil == e ? @"Cannot open the home screen" : e.reason]
             buildError:error];
   }
-  return [[[[FBRunLoopSpinner new]
-            timeout:5]
-           timeoutErrorMessage:@"Timeout waiting until the home screen is visible"]
-          spinUntilTrue:^BOOL{
-    return [systemApp fb_isSameAppAs:self.fb_activeApplication];
-  }
-          error:error];
+  return YES;
 }
 
 - (BOOL)fb_isSameAppAs:(nullable XCUIApplication *)otherApp
@@ -595,6 +654,21 @@ NSDictionary<NSString *, NSString *> *customExclusionAttributesMap(void) {
     return NO;
   }
   return self == otherApp || [self.bundleID isEqualToString:(NSString *)otherApp.bundleID];
+}
+
++ (nullable XCUIElement *)fb_elementForSnapshot:(id<FBXCElementSnapshot>)snapshot
+                                    underElement:(XCUIElement *)rootElement
+{
+  NSString *uid = [FBXCElementSnapshotWrapper wdUIDWithSnapshot:snapshot];
+  if (nil == uid) {
+    return nil;
+  }
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"%K = %@",
+                             FBStringify(FBXCElementSnapshotWrapper, fb_uid), uid];
+  // Filtering by the snapshot's own type (instead of XCUIElementTypeAny) lets
+  // the query narrow down before the uid predicate is even applied.
+  return [[rootElement.fb_query descendantsMatchingType:snapshot.elementType]
+          matchingPredicate:predicate].allElementsBoundByIndex.firstObject;
 }
 
 @end

@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIElement+FBPickerWheel.h"
@@ -17,17 +16,18 @@
 #import "XCUIElement+FBCaching.h"
 #import "XCUIElement+FBResolve.h"
 
-#if !TARGET_OS_TV
+#if !TARGET_OS_TV && !TARGET_OS_WATCH
 @implementation XCUIElement (FBPickerWheel)
 
 static const NSTimeInterval VALUE_CHANGE_TIMEOUT = 2;
 
 - (BOOL)fb_scrollWithOffset:(CGFloat)relativeHeightOffset error:(NSError **)error
 {
-  id<FBXCElementSnapshot> snapshot = [self fb_takeSnapshot:NO];
+  id<FBXCElementSnapshot> snapshot = [self fb_standardSnapshot];
   NSString *previousValue = snapshot.value;
-  XCUICoordinate *startCoord = [self coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)];
-  XCUICoordinate *endCoord = [startCoord coordinateWithOffset:CGVectorMake(0.0, relativeHeightOffset * snapshot.frame.size.height)];
+  // Stay in normalized offsets end-to-end: XCTest never rescales a composed raw
+  // coordinateWithOffset: for compatibility-mode windows (appium/appium#16185).
+  XCUICoordinate *endCoord = [self coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5 + relativeHeightOffset)];
   // If picker value is reflected in its accessiblity id
   // then fetching of the next snapshot may fail with StaleElementReferenceError
   // because we bound elements by their accessbility ids by default.

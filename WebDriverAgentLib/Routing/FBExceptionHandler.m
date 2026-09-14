@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBExceptionHandler.h"
@@ -29,9 +28,13 @@
     commandStatus = [FBCommandStatus invalidArgumentErrorWithMessage:exception.reason
                                                            traceback:traceback];
   } else if ([exception.name isEqualToString:FBApplicationCrashedException]
-             || [exception.name isEqualToString:FBApplicationDeadlockDetectedException]) {
+             || [exception.name isEqualToString:FBApplicationDeadlockDetectedException]
+             || [exception.name isEqualToString:FBAlertActionFailedException]) {
     commandStatus = [FBCommandStatus invalidElementStateErrorWithMessage:exception.reason
                                                                traceback:traceback];
+  } else if ([exception.name isEqualToString:FBAlertSetTextFailedException]) {
+    commandStatus = [FBCommandStatus unsupportedOperationErrorWithMessage:exception.reason
+                                                                traceback:traceback];
   } else if ([exception.name isEqualToString:FBInvalidXPathException]
              || [exception.name isEqualToString:FBClassChainQueryParseException]) {
     commandStatus = [FBCommandStatus invalidSelectorErrorWithMessage:exception.reason
@@ -48,6 +51,9 @@
   } else if ([exception.name isEqualToString:FBSessionCreationException]) {
     commandStatus = [FBCommandStatus sessionNotCreatedError:exception.reason
                                                   traceback:traceback];
+  } else if ([exception.name isEqualToString:FBAlertNotPresentException]) {
+    commandStatus = [FBCommandStatus noAlertOpenErrorWithMessage:exception.reason
+                                                       traceback:traceback];
   } else {
     commandStatus = [FBCommandStatus unknownErrorWithMessage:exception.reason
                                                    traceback:traceback];

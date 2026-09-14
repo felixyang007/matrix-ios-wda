@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "FBResponsePayload.h"
@@ -44,7 +43,9 @@ XCUIElement *maybeStable(XCUIElement *element)
   }
 
   XCUIElement *result = element;
-  id<FBXCElementSnapshot> snapshot = element.lastSnapshot ?: [element fb_cachedSnapshot] ?: [element fb_takeSnapshot:NO];
+  id<FBXCElementSnapshot> snapshot = element.lastSnapshot
+    ?: element.fb_cachedSnapshot
+    ?: [element fb_standardSnapshot];
   NSString *uid = [FBXCElementSnapshotWrapper wdUIDWithSnapshot:snapshot];
   if (nil != uid) {
     result = [element fb_stableInstanceWithUid:uid];
@@ -55,7 +56,9 @@ XCUIElement *maybeStable(XCUIElement *element)
 id<FBResponsePayload> FBResponseWithCachedElement(XCUIElement *element, FBElementCache *elementCache, BOOL compact)
 {
   [elementCache storeElement:maybeStable(element)];
-  return FBResponseWithStatus([FBCommandStatus okWithValue:FBDictionaryResponseWithElement(element, compact)]);
+  NSDictionary *response = FBDictionaryResponseWithElement(element, compact);
+  element.lastSnapshot = nil;
+  return FBResponseWithStatus([FBCommandStatus okWithValue:response]);
 }
 
 id<FBResponsePayload> FBResponseWithCachedElements(NSArray<XCUIElement *> *elements, FBElementCache *elementCache, BOOL compact)
@@ -64,6 +67,7 @@ id<FBResponsePayload> FBResponseWithCachedElements(NSArray<XCUIElement *> *eleme
   for (XCUIElement *element in elements) {
     [elementCache storeElement:maybeStable(element)];
     [elementsResponse addObject:FBDictionaryResponseWithElement(element, compact)];
+    element.lastSnapshot = nil;
   }
   return FBResponseWithStatus([FBCommandStatus okWithValue:elementsResponse]);
 }
@@ -105,7 +109,9 @@ inline NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, BOOL 
 {
   __block NSDictionary *elementResponse = nil;
   @autoreleasepool {
-    id<FBXCElementSnapshot> snapshot = element.lastSnapshot ?: element.fb_cachedSnapshot ?: [element fb_takeSnapshot:YES];
+    id<FBXCElementSnapshot> snapshot = element.lastSnapshot
+      ?: element.fb_cachedSnapshot
+      ?: [element fb_customSnapshot];
     NSDictionary *compactResult = FBToElementDict((NSString *)[FBXCElementSnapshotWrapper wdUIDWithSnapshot:snapshot]);
     if (compact) {
       elementResponse = compactResult;
@@ -114,7 +120,7 @@ inline NSDictionary *FBDictionaryResponseWithElement(XCUIElement *element, BOOL 
 
     NSMutableDictionary *result = compactResult.mutableCopy;
     FBXCElementSnapshotWrapper *wrappedSnapshot = [FBXCElementSnapshotWrapper ensureWrapped:snapshot];
-    NSArray *fields = [FBConfiguration.elementResponseAttributes componentsSeparatedByString:@","];
+    NSArray *fields = [FBConfiguration.sharedInstance.elementResponseAttributes componentsSeparatedByString:@","];
     for (NSString *field in fields) {
       // 'name' here is the w3c-approved identifier for what we mean by 'type'
       if ([field isEqualToString:@"name"] || [field isEqualToString:@"type"]) {

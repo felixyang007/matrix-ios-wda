@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import "XCUIApplicationProcess+FBQuiescence.h"
@@ -15,6 +14,7 @@
 #import "FBExceptions.h"
 #import "FBLogger.h"
 #import "FBSettings.h"
+#import "FBXCAXClientProxy.h"
 
 static void (*original_waitForQuiescenceIncludingAnimationsIdle)(id, SEL, BOOL);
 static void (*original_waitForQuiescenceIncludingAnimationsIdlePreEvent)(id, SEL, BOOL, BOOL);
@@ -22,43 +22,35 @@ static void (*original_waitForQuiescenceIncludingAnimationsIdlePreEvent)(id, SEL
 static void swizzledWaitForQuiescenceIncludingAnimationsIdle(id self, SEL _cmd, BOOL includingAnimations)
 {
   NSString *bundleId = [self bundleID];
-  if (![[self fb_shouldWaitForQuiescence] boolValue] || FBConfiguration.waitForIdleTimeout < DBL_EPSILON) {
+  if (![[self fb_shouldWaitForQuiescence] boolValue] || FBConfiguration.sharedInstance.waitForIdleTimeout < DBL_EPSILON) {
     [FBLogger logFmt:@"Quiescence checks are disabled for %@ application. Making it to believe it is idling",
      bundleId];
     return;
   }
 
-  NSTimeInterval desiredTimeout = FBConfiguration.waitForIdleTimeout;
-  NSTimeInterval previousTimeout = _XCTApplicationStateTimeout();
-  _XCTSetApplicationStateTimeout(desiredTimeout);
+  NSTimeInterval desiredTimeout = FBConfiguration.sharedInstance.waitForIdleTimeout;
   [FBLogger logFmt:@"Waiting up to %@s until %@ is in idle state (%@ animations)",
    @(desiredTimeout), bundleId, includingAnimations ? @"including" : @"excluding"];
-  @try {
+  [FBXCAXClientProxy withApplicationStateTimeout:desiredTimeout do:^{
     original_waitForQuiescenceIncludingAnimationsIdle(self, _cmd, includingAnimations);
-  } @finally {
-    _XCTSetApplicationStateTimeout(previousTimeout);
-  }
+  }];
 }
 
 static void swizzledWaitForQuiescenceIncludingAnimationsIdlePreEvent(id self, SEL _cmd, BOOL includingAnimations, BOOL isPreEvent)
 {
   NSString *bundleId = [self bundleID];
-  if (![[self fb_shouldWaitForQuiescence] boolValue] || FBConfiguration.waitForIdleTimeout < DBL_EPSILON) {
+  if (![[self fb_shouldWaitForQuiescence] boolValue] || FBConfiguration.sharedInstance.waitForIdleTimeout < DBL_EPSILON) {
     [FBLogger logFmt:@"Quiescence checks are disabled for %@ application. Making it to believe it is idling",
      bundleId];
     return;
   }
 
-  NSTimeInterval desiredTimeout = FBConfiguration.waitForIdleTimeout;
-  NSTimeInterval previousTimeout = _XCTApplicationStateTimeout();
-  _XCTSetApplicationStateTimeout(desiredTimeout);
+  NSTimeInterval desiredTimeout = FBConfiguration.sharedInstance.waitForIdleTimeout;
   [FBLogger logFmt:@"Waiting up to %@s until %@ is in idle state (%@ animations)",
    @(desiredTimeout), bundleId, includingAnimations ? @"including" : @"excluding"];
-  @try {
+  [FBXCAXClientProxy withApplicationStateTimeout:desiredTimeout do:^{
     original_waitForQuiescenceIncludingAnimationsIdlePreEvent(self, _cmd, includingAnimations, isPreEvent);
-  } @finally {
-    _XCTSetApplicationStateTimeout(previousTimeout);
-  }
+  }];
 }
 
 @implementation XCUIApplicationProcess (FBQuiescence)

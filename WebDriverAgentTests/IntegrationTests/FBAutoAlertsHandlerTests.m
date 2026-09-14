@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #import <XCTest/XCTest.h>
@@ -45,9 +44,12 @@
   [super tearDown];
 }
 
-// The test is flaky on slow Travis CI
-- (void)disabled_testAutoAcceptingOfAlerts
+- (void)testAutoAcceptingOfAlerts
 {
+  if (FBIntegrationTestCase.isRunningInCI) {
+    XCTSkip(@"Flaky on slow CI machines");
+  }
+
   self.session = [FBSession
                   initWithApplication:XCUIApplication.fb_activeApplication
                   defaultAlertAction:@"accept"];
@@ -58,9 +60,12 @@
   }
 }
 
-// The test is flaky on slow Travis CI
-- (void)disabled_testAutoDismissingOfAlerts
+- (void)testAutoDismissingOfAlerts
 {
+  if (FBIntegrationTestCase.isRunningInCI) {
+    XCTSkip(@"Flaky on slow CI machines");
+  }
+
   self.session = [FBSession
                   initWithApplication:XCUIApplication.fb_activeApplication
                   defaultAlertAction:@"dismiss"];
